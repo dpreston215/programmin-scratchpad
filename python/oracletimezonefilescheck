@@ -1,0 +1,45 @@
+#This script backs up specific timezone files every 6 hours.
+#This script replaces those specific timezone files if they do not exist when this script is ran.
+import os
+import sys
+import time 
+from glob import glob
+from pathlib import Path
+
+DBCONTAINERNAME=sys.argv[0]
+ORACLE_HOME = os.environ.get('ORACLE_HOME')
+REPLACETIME = 21600
+
+# Do oraenv to set environment
+
+os.environ["ORAENV_ASK"] = "NO"
+os.environ["ORACLE_SID"] = DBCONTAINERNAME
+os.system(". oraenv")
+os.environ["ORAENV_ASK"] = "YES"
+
+#Go to time zone file location
+os.chdir(f"{ORACLE_HOME}/oracore/zoneinfo")
+BACKUP_FILE_NAME = "tz_backup.tar"
+
+#Check to see if specific time zone files exist. If yes, then proceed. If no, restore from current backup (will eventually send an email).
+#filenames = ['timezone_3.dat','timezlrg_3.dat','timezlrg_33.dat','timezone_33.dat']
+
+mydir =f"{ORACLE_HOME}/oracore/zoneinfo"
+file_list = glob(mydir + "/*_3*")
+
+for file in file_list:
+    my_file = Path(f"{file}")
+    if my_file.is_file():
+        print("File exists")
+    else:
+        os.system(f"tar --overwrite -xvf {BACKUP_FILE_NAME}")
+        exit
+    
+ 
+#Every 6 hours back up specific Time Zone files.
+x=os.stat(f"{BACKUP_FILE_NAME}")
+FileAge=(time.time()-x.st_mtime) 
+
+if  FileAge > REPLACETIME:
+   os.system(f"rm {BACKUP_FILE_NAME}")
+   os.system("tar -cvf tz_backup.tar timezlrg_3* timezone_3*")
